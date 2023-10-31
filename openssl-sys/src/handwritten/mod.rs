@@ -31,6 +31,7 @@ pub use self::ssl::*;
 pub use self::stack::*;
 #[cfg(ossl320)]
 pub use self::thread::*;
+pub use self::store::*;
 pub use self::tls1::*;
 pub use self::types::*;
 pub use self::x509::*;
@@ -70,6 +71,7 @@ mod ssl;
 mod stack;
 #[cfg(ossl320)]
 mod thread;
+mod store;
 mod tls1;
 mod types;
 mod x509;
