@@ -67,6 +67,8 @@ use crate::error::ErrorStack;
 use crate::ex_data::Index;
 #[cfg(ossl111)]
 use crate::hash::MessageDigest;
+#[cfg(ossl300)]
+use crate::lib_ctx::LibCtxRef;
 #[cfg(any(ossl110, libressl270))]
 use crate::nid::Nid;
 use crate::pkey::{HasPrivate, PKeyRef, Params, Private};
@@ -725,6 +727,28 @@ impl SslContextBuilder {
         unsafe {
             init();
             let ctx = cvt_p(ffi::SSL_CTX_new(method.as_ptr()))?;
+
+            Ok(SslContextBuilder::from_ptr(ctx))
+        }
+    }
+
+    /// Creates a new `SslContextBuilder`.
+    #[cfg(ossl300)]
+    #[corresponds(SSL_CTX_new_ex)]
+    pub fn new_ex(
+        libctx: Option<&LibCtxRef>,
+        propq: Option<&str>,
+        method: SslMethod,
+    ) -> Result<SslContextBuilder, ErrorStack> {
+        unsafe {
+            init();
+            let propq = propq.map(|propq| CString::new(propq).unwrap());
+
+            let ctx = cvt_p(ffi::SSL_CTX_new_ex(
+                libctx.map_or(ptr::null_mut(), ForeignTypeRef::as_ptr),
+                propq.map_or(ptr::null(), |propq| propq.as_ptr()),
+                method.as_ptr(),
+            ))?;
 
             Ok(SslContextBuilder::from_ptr(ctx))
         }
