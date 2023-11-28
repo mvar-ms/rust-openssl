@@ -1,51 +1,101 @@
-use foreign_types::ForeignType;
-
+use crate::cvt_p;
+use crate::error::ErrorStack;
+use crate::lib_ctx::LibCtxRef;
+use crate::pkey::{PKey, Private};
+use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
+use openssl_macros::corresponds;
 use std::ffi::CString;
 use std::ptr;
 
-use crate::cvt_p;
-use crate::error::ErrorStack;
-use crate::pkey::{PKey, Private};
+foreign_type_and_impl_send_sync! {
+    type CType = ffi::OSSL_STORE_CTX;
+    fn drop = ffi::OSSL_STORE_close;
 
-pub struct Store(*mut ffi::OSSL_STORE_CTX);
+    pub struct StoreCtx;
+    pub struct StoreCtxRef;
+}
 
-impl Drop for Store {
-    fn drop(&mut self) {
+pub struct StoreInfo(*mut ffi::OSSL_STORE_INFO);
+
+impl ForeignType for StoreInfo {
+    type CType = ffi::OSSL_STORE_INFO;
+    type Ref = StoreInfoRef;
+
+    #[inline]
+    unsafe fn from_ptr(ptr: *mut Self::CType) -> Self {
+        StoreInfo(ptr)
+    }
+
+    #[inline]
+    fn as_ptr(&self) -> *mut Self::CType {
+        self.0
+    }
+}
+
+pub struct StoreInfoRef(Opaque);
+
+impl ForeignTypeRef for StoreInfoRef {
+    type CType = ffi::OSSL_STORE_INFO;
+}
+
+impl StoreCtx {
+    #[corresponds(OSSL_STORE_open_ex)]
+    pub fn new_ex(
+        uri: Option<&str>,
+        libctx: Option<&LibCtxRef>,
+        propq: Option<&str>,
+    ) -> Result<Self, ErrorStack> {
         unsafe {
-            ffi::OSSL_STORE_close(self.0);
+            let uri = uri.map(|uri| CString::new(uri).unwrap());
+            let propq = propq.map(|propq| CString::new(propq).unwrap());
+
+            let p = cvt_p(ffi::OSSL_STORE_open_ex(
+                uri.map_or(ptr::null(), |uri| uri.as_ptr()),
+                libctx.map_or(ptr::null_mut(), ::foreign_types::ForeignTypeRef::as_ptr),
+                propq.map_or(ptr::null(), |propq| propq.as_ptr()),
+                ptr::null(),
+                ptr::null(),
+                ptr::null(),
+                ptr::null(),
+                ptr::null_mut(),
+            ))?;
+
+            Ok(Self::from_ptr(p))
+        }
+    }
+
+    #[corresponds(OSSL_STORE_open)]
+    pub fn new(uri: Option<&str>) -> Result<Self, ErrorStack> {
+        let uri = uri.map(|uri| CString::new(uri).unwrap());
+
+        unsafe {
+            let p = cvt_p(ffi::OSSL_STORE_open(
+                uri.map_or(ptr::null(), |uri| uri.as_ptr()),
+                ptr::null(),
+                ptr::null(),
+                ptr::null(),
+                ptr::null(),
+            ))?;
+
+            Ok(Self::from_ptr(p))
+        }
+    }
+
+    #[corresponds(OSSL_STORE_load)]
+    pub fn load(self) -> Result<StoreInfo, ErrorStack> {
+        unsafe {
+            let p = cvt_p(ffi::OSSL_STORE_load(self.as_ptr()))?;
+            Ok(StoreInfo::from_ptr(p))
         }
     }
 }
 
-impl Store {
-    pub fn private_key_from_uri(uri: &str) -> Result<Option<PKey<Private>>, ErrorStack> {
-        let uri = CString::new(uri).unwrap();
+impl StoreInfo {
+    #[corresponds(OSSL_STORE_INFO_get1_PKEY)]
+    pub fn get1_pkey(&self) -> Result<PKey<Private>, ErrorStack> {
         unsafe {
-            let store = cvt_p(ffi::OSSL_STORE_open(
-                uri.as_ptr(),
-                ptr::null(),
-                ptr::null(),
-                ptr::null(),
-                ptr::null(),
-            ))
-            .map(|p| Store(p))?;
-
-            let mut store_info = cvt_p(ffi::OSSL_STORE_load(store.0))?;
-
-            while store_info != ptr::null_mut() {
-                let type_ = ffi::OSSL_STORE_INFO_get_type(store_info);
-                if type_ == ffi::OSSL_STORE_INFO_PKEY {
-                    let pkey_ptr = cvt_p(ffi::OSSL_STORE_INFO_get1_PKEY(store_info))?;
-                    return Ok(Some(PKey::from_ptr(pkey_ptr)));
-                }
-
-                ffi::OSSL_STORE_INFO_free(store_info);
-
-                store_info = cvt_p(ffi::OSSL_STORE_load(store.0))?;
-            }
-
-            // error?
-            Ok(None)
+            let p = cvt_p(ffi::OSSL_STORE_INFO_get1_PKEY(self.as_ptr()))?;
+            Ok(PKey::from_ptr(p))
         }
     }
 }
