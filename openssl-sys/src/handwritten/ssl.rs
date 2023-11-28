@@ -461,6 +461,11 @@ cfg_if! {
 extern "C" {
     pub fn SSL_CTX_set_cipher_list(ssl: *mut SSL_CTX, s: *const c_char) -> c_int;
     pub fn SSL_CTX_new(method: *const SSL_METHOD) -> *mut SSL_CTX;
+    pub fn SSL_CTX_new_ex(
+        libctx: *mut OSSL_LIB_CTX,
+        propq: *const c_char,
+        method: *const SSL_METHOD,
+    ) -> *mut SSL_CTX;
     pub fn SSL_CTX_free(ctx: *mut SSL_CTX);
     #[cfg(any(ossl110, libressl273))]
     pub fn SSL_CTX_up_ref(x: *mut SSL_CTX) -> c_int;
