@@ -40,27 +40,29 @@ impl ForeignTypeRef for StoreInfoRef {
 
 impl StoreCtx {
     #[corresponds(OSSL_STORE_open_ex)]
-    pub fn new_ex(
-        uri: Option<&str>,
-        libctx: Option<&LibCtxRef>,
-        propq: Option<&str>,
-    ) -> Result<Self, ErrorStack> {
+    pub fn new_ex(uri: &str, libctx: Option<&LibCtxRef>, propq: &str) -> Result<Self, ErrorStack> {
         unsafe {
-            let uri = uri.map(|uri| CString::new(uri).unwrap());
-            let propq = propq.map(|propq| CString::new(propq).unwrap());
+            let uri = CString::new(uri).unwrap();
+            let propq = CString::new(propq).unwrap();
 
             let p = cvt_p(ffi::OSSL_STORE_open_ex(
-                uri.map_or(ptr::null(), |uri| uri.as_ptr()),
+                uri.as_ptr(),
                 libctx.map_or(ptr::null_mut(), ::foreign_types::ForeignTypeRef::as_ptr),
-                propq.map_or(ptr::null(), |propq| propq.as_ptr()),
+                propq.as_ptr(),
                 ptr::null(),
                 ptr::null(),
                 ptr::null(),
                 ptr::null(),
                 ptr::null_mut(),
-            ))?;
+            ));
 
-            Ok(Self::from_ptr(p))
+            match p {
+                Ok(p) => Ok(Self::from_ptr(p)),
+                Err(e) => {
+                    println!("!!!!!! Error: {:?}", e);
+                    Err(e)
+                }
+            }
         }
     }
 
