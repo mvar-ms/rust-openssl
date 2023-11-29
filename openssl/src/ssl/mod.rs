@@ -737,16 +737,16 @@ impl SslContextBuilder {
     #[corresponds(SSL_CTX_new_ex)]
     pub fn new_ex(
         libctx: Option<&LibCtxRef>,
-        propq: Option<&str>,
+        propq: &str,
         method: SslMethod,
     ) -> Result<SslContextBuilder, ErrorStack> {
         unsafe {
             init();
-            let propq = propq.map(|propq| CString::new(propq).unwrap());
+            let propq = CString::new(propq).unwrap();
 
             let ctx = cvt_p(ffi::SSL_CTX_new_ex(
                 libctx.map_or(ptr::null_mut(), ForeignTypeRef::as_ptr),
-                propq.map_or(ptr::null(), |propq| propq.as_ptr()),
+                propq.as_ptr(),
                 method.as_ptr(),
             ))?;
 
