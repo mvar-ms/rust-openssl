@@ -6,10 +6,15 @@ cfg_if! {
         pub enum OSSL_STORE_CTX {}
         pub enum OSSL_STORE_INFO {}
 
-        pub const OSSL_STORE_INFO_PUBKEY: c_int = 3;
-        pub const OSSL_STORE_INFO_PKEY: c_int = 4;
-        pub const OSSL_STORE_INFO_CERT: c_int = 5;
-        pub const OSSL_STORE_INFO_CRL: c_int = 6;
+        pub enum OSSL_STORE_INFO_TYPES {
+            NONE = 0,
+            NAME = 1,
+            VALUE = 2,
+            PUBKEY = 3,
+            PKEY = 4,
+            CERT = 5,
+            CRL = 6,
+        }
 
         extern "C" {
             pub fn OSSL_STORE_open(
