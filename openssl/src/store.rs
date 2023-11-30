@@ -2,7 +2,7 @@ use crate::cvt_p;
 use crate::error::ErrorStack;
 use crate::lib_ctx::LibCtxRef;
 use crate::pkey::{PKey, Private};
-use foreign_types::{ForeignType, ForeignTypeRef, Opaque};
+use foreign_types::ForeignType;
 use openssl_macros::corresponds;
 use std::ffi::CString;
 use std::ptr;
@@ -15,27 +15,12 @@ foreign_type_and_impl_send_sync! {
     pub struct StoreCtxRef;
 }
 
-pub struct StoreInfo(*mut ffi::OSSL_STORE_INFO);
-
-impl ForeignType for StoreInfo {
+foreign_type_and_impl_send_sync! {
     type CType = ffi::OSSL_STORE_INFO;
-    type Ref = StoreInfoRef;
+    fn drop = ffi::OSSL_STORE_INFO_free;
 
-    #[inline]
-    unsafe fn from_ptr(ptr: *mut Self::CType) -> Self {
-        StoreInfo(ptr)
-    }
-
-    #[inline]
-    fn as_ptr(&self) -> *mut Self::CType {
-        self.0
-    }
-}
-
-pub struct StoreInfoRef(Opaque);
-
-impl ForeignTypeRef for StoreInfoRef {
-    type CType = ffi::OSSL_STORE_INFO;
+    pub struct StoreInfo;
+    pub struct StoreInfoRef;
 }
 
 impl StoreCtx {
@@ -54,15 +39,9 @@ impl StoreCtx {
                 ptr::null(),
                 ptr::null(),
                 ptr::null_mut(),
-            ));
+            ))?;
 
-            match p {
-                Ok(p) => Ok(Self::from_ptr(p)),
-                Err(e) => {
-                    println!("!!!!!! Error: {:?}", e);
-                    Err(e)
-                }
-            }
+            Ok(Self::from_ptr(p))
         }
     }
 
