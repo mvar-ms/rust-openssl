@@ -43,9 +43,11 @@ impl StoreCtx {
                 uri.as_ptr(),
                 libctx.map_or(ptr::null_mut(), ::foreign_types::ForeignTypeRef::as_ptr),
                 propq.as_ptr(),
+                // Ignoring password API
                 ptr::null(),
                 ptr::null(),
                 params.as_ptr(),
+                // Ignore post processing
                 ptr::null(),
                 ptr::null_mut(),
             ))?;
