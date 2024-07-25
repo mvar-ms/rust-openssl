@@ -20,7 +20,6 @@ use std::mem;
 use std::net::IpAddr;
 use std::path::Path;
 use std::ptr;
-use std::slice;
 use std::str;
 
 use crate::asn1::{
@@ -37,7 +36,7 @@ use crate::pkey::{HasPrivate, HasPublic, PKey, PKeyRef, Public};
 use crate::ssl::SslRef;
 use crate::stack::{Stack, StackRef, Stackable};
 use crate::string::OpensslString;
-use crate::util::{ForeignTypeExt, ForeignTypeRefExt};
+use crate::util::{self, ForeignTypeExt, ForeignTypeRefExt};
 use crate::{cvt, cvt_n, cvt_p, cvt_p_const};
 use openssl_macros::corresponds;
 
@@ -662,7 +661,7 @@ impl X509Ref {
             if ptr.is_null() {
                 None
             } else {
-                Some(slice::from_raw_parts(ptr, len as usize))
+                Some(util::from_raw_parts(ptr, len as usize))
             }
         }
     }
@@ -1093,7 +1092,7 @@ impl X509NameBuilder {
     pub fn append_entry_by_text(&mut self, field: &str, value: &str) -> Result<(), ErrorStack> {
         unsafe {
             let field = CString::new(field).unwrap();
-            assert!(value.len() <= crate::SLenType::max_value() as usize);
+            assert!(value.len() <= crate::SLenType::MAX as usize);
             cvt(ffi::X509_NAME_add_entry_by_txt(
                 self.0.as_ptr(),
                 field.as_ptr() as *mut _,
@@ -1120,7 +1119,7 @@ impl X509NameBuilder {
     ) -> Result<(), ErrorStack> {
         unsafe {
             let field = CString::new(field).unwrap();
-            assert!(value.len() <= crate::SLenType::max_value() as usize);
+            assert!(value.len() <= crate::SLenType::MAX as usize);
             cvt(ffi::X509_NAME_add_entry_by_txt(
                 self.0.as_ptr(),
                 field.as_ptr() as *mut _,
@@ -1141,7 +1140,7 @@ impl X509NameBuilder {
     /// [`X509_NAME_add_entry_by_NID`]: https://www.openssl.org/docs/manmaster/crypto/X509_NAME_add_entry_by_NID.html
     pub fn append_entry_by_nid(&mut self, field: Nid, value: &str) -> Result<(), ErrorStack> {
         unsafe {
-            assert!(value.len() <= crate::SLenType::max_value() as usize);
+            assert!(value.len() <= crate::SLenType::MAX as usize);
             cvt(ffi::X509_NAME_add_entry_by_NID(
                 self.0.as_ptr(),
                 field.as_raw(),
@@ -1167,7 +1166,7 @@ impl X509NameBuilder {
         ty: Asn1Type,
     ) -> Result<(), ErrorStack> {
         unsafe {
-            assert!(value.len() <= crate::SLenType::max_value() as usize);
+            assert!(value.len() <= crate::SLenType::MAX as usize);
             cvt(ffi::X509_NAME_add_entry_by_NID(
                 self.0.as_ptr(),
                 field.as_raw(),
@@ -2157,7 +2156,7 @@ impl GeneralNameRef {
             let len = ffi::ASN1_STRING_length(d as *mut _);
 
             #[allow(clippy::unnecessary_cast)]
-            let slice = slice::from_raw_parts(ptr as *const u8, len as usize);
+            let slice = util::from_raw_parts(ptr as *const u8, len as usize);
             // IA5Strings are stated to be ASCII (specifically IA5). Hopefully
             // OpenSSL checks that when loading a certificate but if not we'll
             // use this instead of from_utf8_unchecked just in case.
@@ -2211,7 +2210,7 @@ impl GeneralNameRef {
             let len = ffi::ASN1_STRING_length(d as *mut _);
 
             #[allow(clippy::unnecessary_cast)]
-            Some(slice::from_raw_parts(ptr as *const u8, len as usize))
+            Some(util::from_raw_parts(ptr as *const u8, len as usize))
         }
     }
 }
